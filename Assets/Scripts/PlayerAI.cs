@@ -13,180 +13,140 @@ public class PlayerAI : MonoBehaviour
     private Rigidbody rigidbody;
     public TextMeshProUGUI stateText;
     public float chaseDistance = 5.0f;
+    private ScriptManager scriptManager;
 
     private void Start()
     {
         rigidbody = GetComponent<Rigidbody>();
         agent = GetComponent<NavMeshAgent>();
-        
+        scriptManager = FindObjectOfType<ScriptManager>();
+
     }
     private void Update()
     {
+        SequenceForCollectingCoins();
+
+    }
+
+    private void SequenceForCollectingCoins()
+    {
         if (IsCoinClose())
         {
-            FindNextTarget("Coin");
-        }
-        else if (IsPowerPelletClose())
-        {
-            FindNextTarget("PowerPallet");
-        }
-        else if (AreEnemiesClose())
-        {
-            if (invincibilityActive)
-            {
-                Attack();
-            }
-            else
-            {
-                RunAwayFromEnemies();
-            }
+            ConditionForCheckingCoins();
+            ActionForFindingTheNearestCoin();
+            ActionForCollectingCoin();
         }
     }
-
     private bool IsCoinClose()
     {
-        GameObject[] coins = GameObject.FindGameObjectsWithTag("Coin");
-        float shortestDistance = Mathf.Infinity;
+        // Get all colliders within a sphere with a radius of `searchRadius`
+        Collider[] colliders = Physics.OverlapSphere(transform.position, searchRadius);
 
-        // Find the nearest coin
-        foreach (GameObject coin in coins)
+        // Iterate through each collider
+        foreach (var collider in colliders)
         {
-            float distance = Vector3.Distance(transform.position, coin.transform.position);
-            if (distance < shortestDistance)
+            // Check if the collider has the tag "Coin"
+            if (collider.gameObject.CompareTag("Coin"))
             {
-                shortestDistance = distance;
+                // Check the distance between the player and the coin
+                float distance = Vector3.Distance(transform.position, collider.gameObject.transform.position);
+                if (distance <= chaseDistance)
+                {
+                    // If the coin is close enough, return true
+                    return true;
+                }
             }
         }
-
-        if (shortestDistance <= searchRadius)
-        {
-            return true;
-        }
+        // If no coin was close enough, return false
         return false;
     }
 
-    private bool IsPowerPelletClose()
+    private void ConditionForCheckingCoins()
     {
-        GameObject[] powerPellets = GameObject.FindGameObjectsWithTag("PowerPallet");
-        float shortestDistance = Mathf.Infinity;
-
-        // Find the nearest power pellet
-        foreach (GameObject powerPellet in powerPellets)
+        if (IsCoinClose())
         {
-            float distance = Vector3.Distance(transform.position, powerPellet.transform.position);
-            if (distance < shortestDistance)
-            {
-                shortestDistance = distance;
-            }
-        }
-
-        if (shortestDistance <= searchRadius)
-        {
-            return true;
-        }
-        return false;
-    }
-
-    private void FindNextTarget(string targetTag)
-    {
-        stateText.text = "Finding the target";
-        GameObject[] targets = GameObject.FindGameObjectsWithTag(targetTag);
-        float shortestDistance = Mathf.Infinity;
-        GameObject bestTarget = null;
-
-        foreach (GameObject target in targets)
-        {
-            float distance = Vector3.Distance(transform.position, target.transform.position);
-            if (distance < shortestDistance)
-            {
-                shortestDistance = distance;
-                bestTarget = target;
-            }
-        }
-        if (bestTarget != null)
-        {
-            agent.destination = bestTarget.transform.position;
-            stateText.text = "Moving towards the target";
+            stateText.text = "Coin found!";
         }
         else
         {
-            stateText.text = "No target found";
+            stateText.text = "Searching for coins...";
         }
     }
 
 
-    private bool AreEnemiesClose()
+    private void ActionForFindingTheNearestCoin()
     {
-        // Get all enemies in the scene
-        Enemy[] enemies = FindObjectsOfType<Enemy>();
+        // Add code here to find the nearest coin and set it as the destination for the NavMeshAgent
+        // Example:
+        GameObject nearestCoin = FindNearestCoin();
+        agent.destination = nearestCoin.transform.position;
+    }
 
-        // Check if the player is near any of the enemies
-        foreach (Enemy enemy in enemies)
+    private GameObject FindNearestCoin()
+    {
+        // Get all colliders within a sphere with a radius of `searchRadius`
+        Collider[] colliders = Physics.OverlapSphere(transform.position, searchRadius);
+
+        // Keep track of the nearest coin
+        GameObject nearestCoin = null;
+        float nearestDistance = Mathf.Infinity;
+
+        // Iterate through each collider
+        foreach (var collider in colliders)
         {
-            float distance = Vector3.Distance(transform.position, enemy.transform.position);
-            if (distance < chaseDistance)
+            // Check if the collider has the tag "Coin"
+            if (collider.gameObject.CompareTag("Coin"))
             {
-                return true;
+                // Check the distance between the player and the coin
+                float distance = Vector3.Distance(transform.position, collider.gameObject.transform.position);
+                if (distance < nearestDistance)
+                {
+                    // If this coin is closer than the current nearest coin, update the nearest coin and distance
+                    nearestCoin = collider.gameObject;
+                    nearestDistance = distance;
+                }
             }
         }
-        return false;
+        // Return the nearest coin
+        return nearestCoin;
     }
 
-
-    private float CalculateScore(float distance, string targetTag)
+    private void ActionForCollectingCoin()
     {
-        float proximityScore = 1 / (distance + 1); // +1 to prevent division by zero
-        int targetCount = GameObject.FindGameObjectsWithTag(targetTag).Length;
-        float completionScore = (targetCount - 1) / targetCount; // -1 to exclude the current target
-
-        return proximityScore + completionScore;
-    }
-    private void RunAwayFromEnemies()
-    {
-        stateText.text = "Running Away From Enemies";
-        // Get all enemies in the scene
-        Enemy[] enemies = FindObjectsOfType<Enemy>();
-
-        // Check if the player is near any of the enemies
-        foreach (Enemy enemy in enemies)
+        Coin closestCoin = GetClosestCoin();
+        if (closestCoin == null)
         {
-            float distance = Vector3.Distance(transform.position, enemy.transform.position);
-            if (distance < chaseDistance)
-            {
-                // Set the destination to a point away from the enemy
-                Vector3 awayDirection = transform.position - enemy.transform.position;
-                Vector3 runawayDestination = transform.position + awayDirection;
-                agent.SetDestination(runawayDestination);
-                return;
-            }
+            return;
+        }
+
+        float distance = Vector3.Distance(transform.position, closestCoin.transform.position);
+        if (distance <= chaseDistance)
+        {
+            scriptManager.IncrementCoinCount();
+            Destroy(closestCoin.gameObject);
         }
     }
-    private void Attack()
+
+    private Coin GetClosestCoin()
     {
-        stateText.text = "Attack Enemy";
-        // Get all enemies in the scene
-        Enemy[] enemies = FindObjectsOfType<Enemy>();
+        Coin[] coins = GameObject.FindObjectsOfType<Coin>();
+        Coin closestCoin = null;
+        float closestDistance = float.MaxValue;
 
-        float shortestDistance = Mathf.Infinity;
-        Enemy nearestEnemy = null;
-
-        // Find the nearest enemy
-        foreach (Enemy enemy in enemies)
+        foreach (Coin coin in coins)
         {
-            float distance = Vector3.Distance(transform.position, enemy.transform.position);
-            if (distance < shortestDistance)
+            float distance = Vector3.Distance(transform.position, coin.transform.position);
+            if (distance < closestDistance)
             {
-                shortestDistance = distance;
-                nearestEnemy = enemy;
+                closestDistance = distance;
+                closestCoin = coin;
             }
         }
 
-        // Move towards the nearest enemy
-        if (nearestEnemy != null)
-        {
-            agent.destination = nearestEnemy.transform.position;
-        }
+        return closestCoin;
     }
+
+
 
     private void OnTriggerEnter(Collider collision)
     {
