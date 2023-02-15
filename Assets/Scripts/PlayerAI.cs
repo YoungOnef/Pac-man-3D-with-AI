@@ -25,8 +25,98 @@ public class PlayerAI : MonoBehaviour
     private void Update()
     {
         SequenceForCollectingCoins();
-
+        SequenceForEatingPowerPellets();
+        SequenceForEscapingFromEnemies();
+        SequenceForKillingEnemies();
     }
+
+    private void SequenceForCollectingCoins()
+    {
+        if (IsCoinClose())
+        {
+            ConditionForCheckingCoins();
+            ActionForFindingTheNearestCoin();
+            ActionForCollectingCoin();
+        }
+    }
+
+    private void SequenceForEatingPowerPellets()
+    {
+        if (IsPowerPelletClose())
+        {
+            ConditionForCheckingPowerPellets();
+            ActionForFindingTheNearestPowerPellet();
+            ActionForEatingPowerPellet();
+        }
+    }
+
+    private void SequenceForEscapingFromEnemies()
+    {
+        if (AreEnemiesClose() && !invincibilityActive)
+        {
+            ConditionForCheckingEnemies();
+            ActionForFindingTheNearestEscapeRoute();
+            ActionForEscapingFromEnemies();
+        }
+    }
+
+    private void SequenceForKillingEnemies()
+    {
+        if (AreEnemiesClose() && invincibilityActive)
+        {
+            ConditionForCheckingPowerPellet();
+            ActionForFindingTheNearestEnemy();
+            ActionForKillingEnemy();
+        }
+    }
+    private bool IsPowerPelletClose()
+    {
+        // Get all colliders within a sphere with a radius of `searchRadius`
+        Collider[] colliders = Physics.OverlapSphere(transform.position, searchRadius);
+
+        // Iterate through each collider
+        foreach (var collider in colliders)
+        {
+            // Check if the collider has the tag "PowerPellet"
+            if (collider.gameObject.CompareTag("PowerPellet"))
+            {
+                // Check the distance between the player and the Power Pellet
+                float distance = Vector3.Distance(transform.position, collider.gameObject.transform.position);
+                if (distance <= chaseDistance)
+                {
+                    // If the Power Pellet is close enough, return true
+                    return true;
+                }
+            }
+        }
+        // If no Power Pellet was close enough, return false
+        return false;
+    }
+    private void ActionForFindingTheNearestPowerPellet()
+    {
+        // Add code here to find the nearest Power Pellet and set it as the destination for the NavMeshAgent
+        // Example:
+        GameObject nearestPowerPellet = FindNearestPowerPellet();
+        agent.destination = nearestPowerPellet.transform.position;
+    }
+    private void ActionForEatingPowerPellet()
+    {
+        PowerPellet closestPowerPellet = GetClosestPowerPellet();
+        if (closestPowerPellet == null)
+        {
+            return;
+        }
+
+        float distance = Vector3.Distance(transform.position, closestPowerPellet.transform.position);
+        if (distance <= 0.1f)
+        {
+            scriptManager.IncrementPowerPelletCount();
+            Destroy(closestPowerPellet.gameObject);
+        }
+    }
+
+
+
 
     private void SequenceForCollectingCoins()
     {
@@ -120,7 +210,7 @@ public class PlayerAI : MonoBehaviour
         }
 
         float distance = Vector3.Distance(transform.position, closestCoin.transform.position);
-        if (distance <= chaseDistance)
+        if (distance <= 0.1f)
         {
             scriptManager.IncrementCoinCount();
             Destroy(closestCoin.gameObject);
