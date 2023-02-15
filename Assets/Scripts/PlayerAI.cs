@@ -12,7 +12,7 @@ public class PlayerAI : MonoBehaviour
     public float searchRadius = 10f;
     private Rigidbody rigidbody;
     public TextMeshProUGUI stateText;
-    public float chaseDistance = 5.0f;
+    public float chaseDistance = 7.0f;
     float maxDistance = 15f;
 
 

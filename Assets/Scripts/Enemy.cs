@@ -10,7 +10,7 @@ public class Enemy : MonoBehaviour
     PlayerAI player;
     bool hasReachedDestination;
     public TextMeshProUGUI stateText;
-    float chaseDistance = 5.0f;
+    float chaseDistance = 2.0f;
     private float stuckTime = 0f;
     private float stuckThreshold = 2f;
 
